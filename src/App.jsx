@@ -8,6 +8,7 @@ import logo from './assets/logo.png'
 
 gsap.registerPlugin(ScrollTrigger)
 import { Typewriter } from 'react-simple-typewriter'
+import emailjs from 'emailjs-com';
 
 // Import Swiper styles
 import 'swiper/css'
@@ -18,6 +19,7 @@ import Portfolio from './components/Portfolio';
 function App() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [showScrollTop, setShowScrollTop] = useState(false);
+  const [isScrolled, setIsScrolled] = useState(false);
   // DaisyUI theme state: default is dark
   const [theme, setTheme] = useState(() => {
     if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
@@ -31,6 +33,14 @@ function App() {
     document.documentElement.setAttribute('data-theme', theme);
   }, [theme]);
 
+  // Track scroll for sticky header shrink
+  useEffect(() => {
+    const onScroll = () => {
+      setIsScrolled(window.scrollY > 60);
+    };
+    window.addEventListener('scroll', onScroll);
+    return () => window.removeEventListener('scroll', onScroll);
+  }, []);
 
   // Refs for animation
   const headerRef = useRef(null);
@@ -236,15 +246,56 @@ function App() {
     { title: "E-Commerce", desc: "Setting up robust online stores with secure payment integration." },
   ];
 
+  const [formData, setFormData] = useState({
+    name: '',
+    phone: '',
+    email: '',
+    subject: '',
+    message: ''
+  });
+  const [sending, setSending] = useState(false);
+  const [resultMsg, setResultMsg] = useState('');
+
+  const handleChange = e => {
+    setFormData({ ...formData, [e.target.name]: e.target.value });
+  };
+
+  const handleSendEmail = e => {
+    e.preventDefault();
+    setSending(true);
+    setResultMsg('');
+    emailjs.send(
+      import.meta.env.VITE_EMAILJS_SERVICE_ID,
+      import.meta.env.VITE_EMAILJS_TEMPLATE_ID,
+      {
+        from_name: formData.name,
+        phone: formData.phone,
+        reply_to: formData.email,
+        subject: formData.subject,
+        message: formData.message
+      },
+      import.meta.env.VITE_EMAILJS_PUBLIC_KEY
+    )
+      .then(() => {
+        setResultMsg('Message sent successfully!');
+        setFormData({ name: '', phone: '', email: '', subject: '', message: '' });
+      })
+      .catch(() => setResultMsg('Failed to send message. Please try again.'))
+      .finally(() => setSending(false));
+  };
+
   return (
     <div className="min-h-screen p-4 sm:p-6 md:p-8 lg:px-24 lg:py-12 bg-background-light dark:bg-background-dark text-text-dark dark:text-text-light font-body transition-colors duration-300">
 
-      <header ref={headerRef} className="flex justify-between items-center mb-16 opacity-0">
+      <header
+        ref={headerRef}
+        className={`sticky top-0 z-40 flex justify-between items-center mb-19 bg-background-light dark:bg-background-dark transition-all duration-300 ${isScrolled ? 'h-14 py-2 shadow-lg' : 'h-10 py-6'} opacity-100`}
+        style={{ boxShadow: isScrolled ? '0 2px 16px rgba(0,0,0,0.08)' : 'none' }}
+      >
         <div className="flex items-center gap-2">
-          <div className="w-35">
-            <img src={logo} alt="" />
+          <div className="">
+            <img src={logo} alt="" className={`transition-all duration-300 ${isScrolled ? 'w-40 h-13' : 'w-46 h-17'}`} />
           </div>
-
         </div>
         <nav className="hidden lg:flex items-center gap-8">
           <a href="#" className="active">HOME</a>
@@ -253,8 +304,35 @@ function App() {
           <a href="#skills">SKILLS</a>
           <a href="#contact">CONTACT</a>
         </nav>
-
+        {/* Mobile Menu Button */}
+        <div className="lg:hidden">
+          <button
+            onClick={() => setIsMenuOpen(!isMenuOpen)}
+            className={`p-2 rounded transition-transform duration-300 ${isMenuOpen ? 'rotate-90' : ''}`}
+            aria-label="Open mobile menu"
+          >
+            <span className="material-symbols-outlined text-text-dark dark:text-white text-3xl">menu</span>
+          </button>
+        </div>
       </header>
+      {/* Animated Mobile Menu */}
+      <div
+        className={`fixed top-0 right-0 h-full w-64 bg-card-dark shadow-custom-dark z-50 transform transition-transform duration-500 ${isMenuOpen ? 'translate-x-0' : 'translate-x-full'} flex flex-col gap-4 pt-24 px-8 lg:hidden`}
+        style={{ willChange: 'transform' }}
+      >
+        <button
+          onClick={() => setIsMenuOpen(false)}
+          className="absolute top-6 right-6 p-2 rounded-full bg-primary text-white"
+          aria-label="Close mobile menu"
+        >
+          <span className="material-symbols-outlined text-2xl">close</span>
+        </button>
+        <a href="#" className="text-white">HOME</a>
+        <a href="#features" className="text-text-light hover:text-white">FEATURES</a>
+        <a href="#portfolio" className="text-text-light hover:text-white">PORTFOLIO</a>
+        <a href="#skills" className="text-text-light hover:text-white">SKILLS</a>
+        <a href="#contact" className="text-text-light hover:text-white">CONTACT</a>
+      </div>
 
       {/* Back to Top Button */}
       {
@@ -265,19 +343,6 @@ function App() {
           >
             <span className="material-symbols-outlined">arrow_upward</span>
           </button>
-        )
-      }
-
-      {/* Mobile Menu */}
-      {
-        isMenuOpen && (
-          <nav className="flex flex-col gap-4 mb-8 lg:hidden bg-card-dark p-4 rounded-lg shadow-custom-dark">
-            <a href="#" className="text-white">HOME</a>
-            <a href="#features" className="text-text-light hover:text-white">FEATURES</a>
-            <a href="#portfolio" className="text-text-light hover:text-white">PORTFOLIO</a>
-            <a href="#" className="text-text-light hover:text-white">SKILLS</a>
-            <a href="#" className="text-text-light hover:text-white">CONTACT</a>
-          </nav>
         )
       }
 
@@ -309,19 +374,21 @@ function App() {
               <div>
                 <p className="text-xs font-medium uppercase tracking-widest text-gray-600 dark:text-text-light mb-4">Find with me</p>
                 <div className="flex items-center gap-4">
-                  <a href="" className="icon-box">
-                    <svg className="w-5 h-5 transition-colors" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                      <path fillRule="evenodd" clipRule="evenodd" d="M22 12c0-5.523-4.477-10-10-10S2 6.477 2 12c0 4.991 3.657 9.128 8.438 9.878v-6.987h-2.54V12h2.54V9.797c0-2.506 1.492-3.89 3.777-3.89 1.094 0 2.238.195 2.238.195v2.46h-1.26c-1.243 0-1.63.771-1.63 1.562V12h2.773l-.443 2.89h-2.33v6.988C18.343 21.128 22 16.991 22 12z"></path>
-                    </svg>
-                  </a>
-                  <a href="#" className="icon-box">
-                    <svg className="w-5 h-5 transition-colors" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" fill="currentColor" role="img">
-                      <path d="M8.281 11.234h2.25c.875 0 1.375.344 1.375 1.031 0 .75-.625 1.094-1.531 1.094H8.281v-2.125zm.031-2.031H12.5c.906 0 1.438.406 1.438 1.125 0 .781-.625 1.156-1.531 1.156H8.312V9.203zM15 12h3.125V9.656h-3.125V12zm0 2.375h3.406v-1.75H15v1.75zM12.188 0H2.25v24h19.5V0h-9.562zM9.562 7.156c.938 0 1.594.219 2.031.625.438.438.656 1.062.656 1.844 0 1.781-1.031 2.656-3 2.656H8.28v2.094h3.625v1.594H6.625V7.156h2.937zm7.5 9.438H15V7.156h4.375v1.594H16.6v2.344h2.406v1.562H16.6v2.844h2.781v1.594H15v1.562z"></path>
-                    </svg>
-                  </a>
-                  <a href="#" className="icon-box">
+                  <a href="https://www.linkedin.com/in/coder-sabbir/" className="icon-box">
                     <svg className="w-5 h-5 transition-colors" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                       <path d="M19 0h-14c-2.761 0-5 2.239-5 5v14c0 2.761 2.239 5 5 5h14c2.762 0 5-2.239 5-5v-14c0-2.761-2.238-5-5-5zm-11 19h-3v-11h3v11zm-1.5-12.268c-.966 0-1.75-.79-1.75-1.764s.784-1.764 1.75-1.764 1.75.79 1.75 1.764-.783 1.764-1.75 1.764zm13.5 12.268h-3v-5.604c0-3.368-4-3.113-4 0v5.604h-3v-11h3v1.765c1.396-2.586 7-2.777 7 2.476v6.759z"></path>
+                    </svg>
+                  </a>
+
+                  <a href="https://github.com/Sabbir-Coder" className="icon-box">
+                    <svg className="w-5 h-5 transition-colors" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                      <path d="M12 0C5.37 0 0 5.37 0 12c0 5.3 3.438 9.8 8.205 11.385.6.113.82-.263.82-.582 0-.288-.01-1.05-.015-2.06-3.338.726-4.042-1.61-4.042-1.61-.546-1.387-1.333-1.756-1.333-1.756-1.09-.745.083-.729.083-.729 1.205.085 1.84 1.237 1.84 1.237 1.07 1.834 2.807 1.304 3.492.997.108-.775.418-1.305.76-1.606-2.665-.304-5.466-1.332-5.466-5.93 0-1.31.468-2.38 1.236-3.22-.124-.303-.535-1.523.117-3.176 0 0 1.008-.322 3.3 1.23a11.52 11.52 0 013.003-.404c1.018.005 2.045.138 3.003.404 2.29-1.552 3.296-1.23 3.296-1.23.653 1.653.242 2.873.118 3.176.77.84 1.235 1.91 1.235 3.22 0 4.61-2.804 5.624-5.475 5.921.43.37.813 1.102.813 2.222 0 1.606-.014 2.898-.014 3.293 0 .322.218.699.825.58C20.565 21.796 24 17.297 24 12c0-6.63-5.37-12-12-12z" />
+                    </svg>
+                  </a>
+
+                  <a href="https://www.facebook.com/sabbir1647/" className="icon-box">
+                    <svg className="w-5 h-5 transition-colors" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                      <path fillRule="evenodd" clipRule="evenodd" d="M22 12c0-5.523-4.477-10-10-10S2 6.477 2 12c0 4.991 3.657 9.128 8.438 9.878v-6.987h-2.54V12h2.54V9.797c0-2.506 1.492-3.89 3.777-3.89 1.094 0 2.238.195 2.238.195v2.46h-1.26c-1.243 0-1.63.771-1.63 1.562V12h2.773l-.443 2.89h-2.33v6.988C18.343 21.128 22 16.991 22 12z"></path>
                     </svg>
                   </a>
                 </div>
@@ -331,11 +398,13 @@ function App() {
                 <p className="text-xs font-medium uppercase tracking-widest text-gray-600 dark:text-text-light mb-4">My Resume</p>
                 <div className="flex gap-4">
                   <a
-                    href="#"
-                    className="px-6 py-3 bg-card-light dark:bg-card-dark rounded-lg shadow-custom-light dark:shadow-custom-dark text-primary font-medium uppercase tracking-wider hover:-translate-y-1 transition-transform duration-300 text-sm"
+                    href="/resume.pdf"
+                    download="Sabbir-Hossain-Resume.pdf"
+                    className="px-6 py-3 bg-card-light dark:bg-card-dark rounded-lg shadow-custom-light dark:shadow-custom-dark text-primary font-medium uppercase tracking-wider hover:-translate-y-1 transition-transform duration-300 text-sm inline-block"
                   >
-                    Download CV
+                    Download Resume
                   </a>
+
                   <a
                     href="#contact"
                     className="px-6 py-3 bg-card-light dark:bg-card-dark rounded-lg shadow-custom-light dark:shadow-custom-dark text-text-dark dark:text-white font-medium uppercase tracking-wider hover:-translate-y-1 transition-transform duration-300 text-sm hover:text-primary"
@@ -394,7 +463,6 @@ function App() {
         </section>
 
         {/* Portfolio Section */}
-        <Portfolio />
 
         {/* Skills Section */}
         <section id="skills" className="py-16 border-t border-gray-200 dark:border-gray-800">
@@ -497,6 +565,10 @@ function App() {
           </div>
         </section>
 
+        <Portfolio />
+
+
+
         {/* Contact Section */}
         <section id="contact" className="py-16 border-t border-gray-200 dark:border-gray-800">
           <div className="text-center mb-16">
@@ -519,25 +591,27 @@ function App() {
                 I am available for freelance work. Connect with me via and call in to my account.
               </p>
               <div className="mb-4">
-                <p className="text-gray-600 dark:text-text-light"><span className="text-text-dark dark:text-white font-medium">Phone:</span> +01234567890</p>
-                <p className="text-gray-600 dark:text-text-light"><span className="text-text-dark dark:text-white font-medium">Email:</span> admin@example.com</p>
+                <p className="text-gray-600 dark:text-text-light"><span className="text-text-dark dark:text-white font-medium">Phone:</span> +8801854919373</p>
+                <p className="text-gray-600 dark:text-text-light"><span className="text-text-dark dark:text-white font-medium">Email:</span> sabbir213924@gmail.com</p>
               </div>
               <div>
                 <p className="text-xs font-medium uppercase tracking-widest text-gray-600 dark:text-text-light mb-4 text-left">Find with me</p>
                 <div className="flex items-center gap-4">
-                  <a href="#" className="icon-box">
-                    <svg className="w-5 h-5 transition-colors" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                      <path fillRule="evenodd" clipRule="evenodd" d="M22 12c0-5.523-4.477-10-10-10S2 6.477 2 12c0 4.991 3.657 9.128 8.438 9.878v-6.987h-2.54V12h2.54V9.797c0-2.506 1.492-3.89 3.777-3.89 1.094 0 2.238.195 2.238.195v2.46h-1.26c-1.243 0-1.63.771-1.63 1.562V12h2.773l-.443 2.89h-2.33v6.988C18.343 21.128 22 16.991 22 12z"></path>
-                    </svg>
-                  </a>
-                  <a href="#" className="icon-box">
-                    <svg className="w-5 h-5 transition-colors" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" fill="currentColor" role="img">
-                      <path d="M8.281 11.234h2.25c.875 0 1.375.344 1.375 1.031 0 .75-.625 1.094-1.531 1.094H8.281v-2.125zm.031-2.031H12.5c.906 0 1.438.406 1.438 1.125 0 .781-.625 1.156-1.531 1.156H8.312V9.203zM15 12h3.125V9.656h-3.125V12zm0 2.375h3.406v-1.75H15v1.75zM12.188 0H2.25v24h19.5V0h-9.562zM9.562 7.156c.938 0 1.594.219 2.031.625.438.438.656 1.062.656 1.844 0 1.781-1.031 2.656-3 2.656H8.28v2.094h3.625v1.594H6.625V7.156h2.937zm7.5 9.438H15V7.156h4.375v1.594H16.6v2.344h2.406v1.562H16.6v2.844h2.781v1.594H15v1.562z"></path>
-                    </svg>
-                  </a>
-                  <a href="#" className="icon-box">
+                  <a href="https://www.linkedin.com/in/coder-sabbir/" className="icon-box">
                     <svg className="w-5 h-5 transition-colors" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                       <path d="M19 0h-14c-2.761 0-5 2.239-5 5v14c0 2.761 2.239 5 5 5h14c2.762 0 5-2.239 5-5v-14c0-2.761-2.238-5-5-5zm-11 19h-3v-11h3v11zm-1.5-12.268c-.966 0-1.75-.79-1.75-1.764s.784-1.764 1.75-1.764 1.75.79 1.75 1.764-.783 1.764-1.75 1.764zm13.5 12.268h-3v-5.604c0-3.368-4-3.113-4 0v5.604h-3v-11h3v1.765c1.396-2.586 7-2.777 7 2.476v6.759z"></path>
+                    </svg>
+                  </a>
+
+                  <a href="https://github.com/Sabbir-Coder" className="icon-box">
+                    <svg className="w-5 h-5 transition-colors" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                      <path d="M12 0C5.37 0 0 5.37 0 12c0 5.3 3.438 9.8 8.205 11.385.6.113.82-.263.82-.582 0-.288-.01-1.05-.015-2.06-3.338.726-4.042-1.61-4.042-1.61-.546-1.387-1.333-1.756-1.333-1.756-1.09-.745.083-.729.083-.729 1.205.085 1.84 1.237 1.84 1.237 1.07 1.834 2.807 1.304 3.492.997.108-.775.418-1.305.76-1.606-2.665-.304-5.466-1.332-5.466-5.93 0-1.31.468-2.38 1.236-3.22-.124-.303-.535-1.523.117-3.176 0 0 1.008-.322 3.3 1.23a11.52 11.52 0 013.003-.404c1.018.005 2.045.138 3.003.404 2.29-1.552 3.296-1.23 3.296-1.23.653 1.653.242 2.873.118 3.176.77.84 1.235 1.91 1.235 3.22 0 4.61-2.804 5.624-5.475 5.921.43.37.813 1.102.813 2.222 0 1.606-.014 2.898-.014 3.293 0 .322.218.699.825.58C20.565 21.796 24 17.297 24 12c0-6.63-5.37-12-12-12z" />
+                    </svg>
+                  </a>
+
+                  <a href="https://www.facebook.com/sabbir1647/" className="icon-box">
+                    <svg className="w-5 h-5 transition-colors" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                      <path fillRule="evenodd" clipRule="evenodd" d="M22 12c0-5.523-4.477-10-10-10S2 6.477 2 12c0 4.991 3.657 9.128 8.438 9.878v-6.987h-2.54V12h2.54V9.797c0-2.506 1.492-3.89 3.777-3.89 1.094 0 2.238.195 2.238.195v2.46h-1.26c-1.243 0-1.63.771-1.63 1.562V12h2.773l-.443 2.89h-2.33v6.988C18.343 21.128 22 16.991 22 12z"></path>
                     </svg>
                   </a>
                 </div>
@@ -545,31 +619,32 @@ function App() {
             </div>
 
             <div className="md:col-span-2 bg-card-light dark:bg-card-dark p-8 rounded-lg shadow-custom-light dark:shadow-custom-dark">
-              <form className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <form className="grid grid-cols-1 md:grid-cols-2 gap-6" onSubmit={handleSendEmail}>
                 <div className="md:col-span-1">
                   <label className="block text-gray-600 dark:text-text-light text-sm font-medium mb-2 uppercase tracking-wide">Your Name</label>
-                  <input type="text" className="w-full bg-gray-100 dark:bg-[#191b1e] border border-gray-200 dark:border-[#191b1e] rounded-md px-4 py-3 text-text-dark dark:text-white focus:border-primary focus:outline-none shadow-inner" />
+                  <input name="name" type="text" value={formData.name} onChange={handleChange} className="w-full bg-gray-100 dark:bg-[#191b1e] border border-gray-200 dark:border-[#191b1e] rounded-md px-4 py-3 text-text-dark dark:text-white focus:border-primary focus:outline-none shadow-inner" required />
                 </div>
                 <div className="md:col-span-1">
                   <label className="block text-gray-600 dark:text-text-light text-sm font-medium mb-2 uppercase tracking-wide">Phone Number</label>
-                  <input type="text" className="w-full bg-gray-100 dark:bg-[#191b1e] border border-gray-200 dark:border-[#191b1e] rounded-md px-4 py-3 text-text-dark dark:text-white focus:border-primary focus:outline-none shadow-inner" />
+                  <input name="phone" type="text" value={formData.phone} onChange={handleChange} className="w-full bg-gray-100 dark:bg-[#191b1e] border border-gray-200 dark:border-[#191b1e] rounded-md px-4 py-3 text-text-dark dark:text-white focus:border-primary focus:outline-none shadow-inner" required />
                 </div>
                 <div className="md:col-span-2">
                   <label className="block text-gray-600 dark:text-text-light text-sm font-medium mb-2 uppercase tracking-wide">Email</label>
-                  <input type="email" className="w-full bg-gray-100 dark:bg-[#191b1e] border border-gray-200 dark:border-[#191b1e] rounded-md px-4 py-3 text-text-dark dark:text-white focus:border-primary focus:outline-none shadow-inner" />
+                  <input name="email" type="email" value={formData.email} onChange={handleChange} className="w-full bg-gray-100 dark:bg-[#191b1e] border border-gray-200 dark:border-[#191b1e] rounded-md px-4 py-3 text-text-dark dark:text-white focus:border-primary focus:outline-none shadow-inner" required />
                 </div>
                 <div className="md:col-span-2">
                   <label className="block text-gray-600 dark:text-text-light text-sm font-medium mb-2 uppercase tracking-wide">Subject</label>
-                  <input type="text" className="w-full bg-gray-100 dark:bg-[#191b1e] border border-gray-200 dark:border-[#191b1e] rounded-md px-4 py-3 text-text-dark dark:text-white focus:border-primary focus:outline-none shadow-inner" />
+                  <input name="subject" type="text" value={formData.subject} onChange={handleChange} className="w-full bg-gray-100 dark:bg-[#191b1e] border border-gray-200 dark:border-[#191b1e] rounded-md px-4 py-3 text-text-dark dark:text-white focus:border-primary focus:outline-none shadow-inner" required />
                 </div>
                 <div className="md:col-span-2">
                   <label className="block text-gray-600 dark:text-text-light text-sm font-medium mb-2 uppercase tracking-wide">Your Message</label>
-                  <textarea rows="6" className="w-full bg-gray-100 dark:bg-[#191b1e] border border-gray-200 dark:border-[#191b1e] rounded-md px-4 py-3 text-text-dark dark:text-white focus:border-primary focus:outline-none shadow-inner"></textarea>
+                  <textarea name="message" rows="6" value={formData.message} onChange={handleChange} className="w-full bg-gray-100 dark:bg-[#191b1e] border border-gray-200 dark:border-[#191b1e] rounded-md px-4 py-3 text-text-dark dark:text-white focus:border-primary focus:outline-none shadow-inner" required></textarea>
                 </div>
                 <div className="md:col-span-2">
-                  <button type="submit" className="w-full bg-card-light dark:bg-card-dark text-primary uppercase font-medium py-4 rounded-lg shadow-custom-light dark:shadow-custom-dark hover:-translate-y-1 transition-all duration-300 border border-transparent hover:border-black/50">
-                    Send Message
+                  <button type="submit" disabled={sending} className="w-full bg-card-light dark:bg-card-dark text-primary uppercase font-medium py-4 rounded-lg shadow-custom-light dark:shadow-custom-dark hover:-translate-y-1 transition-all duration-300 border border-transparent hover:border-black/50">
+                    {sending ? 'Sending...' : 'Send Message'}
                   </button>
+                  {resultMsg && <p className="mt-4 text-center text-primary">{resultMsg}</p>}
                 </div>
               </form>
             </div>
@@ -600,12 +675,9 @@ function App() {
 
       <footer className="py-8 text-center border-t border-gray-200 dark:border-gray-800">
         <div className="flex justify-center items-center gap-2 mb-4">
-          <div className="w-8 h-8">
-            <svg fill="#f9004d" viewBox="0 0 54 54" xmlns="http://www.w3.org/2000/svg">
-              <path d="M27,0C12.1,0,0,12.1,0,27s12.1,27,27,27s27-12.1,27-27S41.9,0,27,0z M35.4,38.8c-0.6,0.9-1.5,1.4-2.5,1.4c-0.8,0-1.6-0.4-2.1-1.1l-6.8-9.3c-0.3-0.4-0.8-0.6-1.3-0.6s-1,0.2-1.3,0.6l-6.8,9.3c-0.6,0.7-1.3,1.1-2.1,1.1c-1,0-1.9-0.5-2.5-1.4C9.4,37.9,9.3,37,9.6,36l9.3-13.3c0.1-0.1,0.1-0.2,0.2-0.3l-9.1-13c-0.3-0.4-0.3-1.1,0-1.6c0.6-0.9,1.5-1.4,2.5-1.4c0.8,0,1.6,0.4,2.1,1.1l6.7,9.2c0.3,0.4,0.8,0.6,1.3,0.6c0.5,0,1-0.2,1.3-0.6l6.7-9.2c0.6-0.7,1.3-1.1,2.1-1.1c1,0,1.9,0.5,2.5,1.4c0.3,0.4,0.4,1.1,0,1.6l-9.1,13c0.1,0.1,0.1,0.2,0.2,0.3l9.3,13.3C36.1,37,36,37.9,35.4,38.8z"></path>
-            </svg>
+          <div className="w-48 h-18">
+            <img src={logo} alt="" />
           </div>
-          <span className="font-bold text-text-dark dark:text-white font-display text-lg">Sabbir Hossain</span>
         </div>
         <p className="text-gray-600 dark:text-text-light text-sm">
           © {new Date().getFullYear()}. All rights reserved by <span className="text-primary hover:underline cursor-pointer">Sabbir Hossain</span>
