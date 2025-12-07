@@ -41,13 +41,13 @@ body {
         @apply w-14 h-14 rounded-md flex items-center justify-center cursor-pointer transition-all duration-300 ease-in-out;
         @apply bg-card-light shadow-custom-light text-text-dark;
         @apply dark:bg-card-dark dark:shadow-custom-dark dark:text-text-light/80;
-        @apply hover:-translate-y-1 hover:bg-gradient-to-br hover:from-gray-100 hover:to-white;
+        @apply hover:-translate-y-1 hover:bg-gradient-to-br hover:from-gray-800 hover:to-black;
         @apply dark:hover:bg-gradient-to-br dark:hover:from-gray-800 dark:hover:to-black;
     }
 
     .icon-box:hover {
         @apply shadow-custom-light-inner dark:shadow-custom-dark;
-        box-shadow: var(--shadow-custom-light-inner);
+        box-shadow: var(--shadow-custom-dark-inner);
     }
 
     html.dark .icon-box:hover {
